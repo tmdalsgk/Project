@@ -67,57 +67,98 @@ class Board:
         return row * self.cols + col
 
     def is_inbounds(self, col: int, row: int) -> bool:
-        # TODO: Return True if (col,row) is inside the board bounds.
-        pass
+        return 0 <= col < self.cols and 0 <= row < self.rows
 
     def neighbors(self, col: int, row: int) -> List[Tuple[int, int]]:
-        # TODO: Return list of valid neighboring coordinates around (col,row).
-        # deltas = [
-        #     (-1, -1), (0, -1), (1, -1),
-        #     (-1, 0),            (1, 0),
-        #     (-1, 1),  (0, 1),  (1, 1),
-        # ]
-        # result = []
-        
-        # return result
-        pass
+       deltas = [
+        (-1, -1), (0, -1), (1, -1),
+        (-1, 0),           (1, 0),
+        (-1, 1),  (0, 1),  (1, 1),
+        ]
+       result = []
+       for dc, dr in deltas:
+        nc, nr = col + dc, row + dr
+        if self.is_inbounds(nc, nr):
+         result.append((nc, nr))
+       return result
 
-    def place_mines(self, safe_col: int, safe_row: int) -> None:
-        # TODO: Place mines randomly, guaranteeing the first click and its neighbors are safe. And Compute adjacency counts
-        # all_positions = [(c, r) for r in range(self.rows) for c in range(self.cols)]
-        # forbidden = {(safe_col, safe_row)} | set(self.neighbors(safe_col, safe_row))
-        # pool = [p for p in all_positions if p not in forbidden]
-        # random.shuffle(pool)
-        
-        # Compute adjacency counts
-        # for r in range(self.rows):
-        #     for c in range(self.cols):
+def place_mines(self, safe_col: int, safe_row: int) -> None:
+    all_positions = [(c, r) for r in range(self.rows) for c in range(self.cols)]
+    forbidden = {(safe_col, safe_row)} | set(self.neighbors(safe_col, safe_row))
+    pool = [p for p in all_positions if p not in forbidden]
+    random.shuffle(pool)
 
-        # self._mines_placed = True
+    # 배치
+    for c, r in pool[: self.num_mines]:
+        self.cells[self.index(c, r)].state.is_mine = True
 
-        pass
+    # adjacency 계산
+    for r in range(self.rows):
+        for c in range(self.cols):
+            idx = self.index(c, r)
+            if self.cells[idx].state.is_mine:
+                continue
+            count = sum(
+                1
+                for (nc, nr) in self.neighbors(c, r)
+                if self.cells[self.index(nc, nr)].state.is_mine
+            )
+            self.cells[idx].state.adjacent = count
 
-    def reveal(self, col: int, row: int) -> None:
-        # TODO: Reveal a cell; if zero-adjacent, iteratively flood to neighbors.
-        # if not self.is_inbounds(col, row):
-        #     return
-        # if not self._mines_placed:
-        #     self.place_mines(col, row)
+    self._mines_placed = True
 
-        
-        # self._check_win()
-        pass
+def reveal(self, col: int, row: int) -> None:
+    if not self.is_inbounds(col, row):
+        return
+
+    if not self._mines_placed:
+        self.place_mines(col, row)
+
+    cell = self.cells[self.index(col, row)]
+    if cell.state.is_revealed or cell.state.is_flagged:
+        return
+
+    cell.state.is_revealed = True
+    self.revealed_count += 1
+
+    # 지뢰 클릭 → 게임오버
+    if cell.state.is_mine:
+        self.game_over = True
+        self._reveal_all_mines()
+        return
+
+    # 0인 칸이면 flood-fill
+    if cell.state.adjacent == 0:
+        stack = [(col, row)]
+        visited = set()
+        while stack:
+            c, r = stack.pop()
+            for nc, nr in self.neighbors(c, r):
+                idx = self.index(nc, nr)
+                neighbor = self.cells[idx]
+                if (nc, nr) in visited:
+                    continue
+                if neighbor.state.is_revealed or neighbor.state.is_flagged:
+                    continue
+                visited.add((nc, nr))
+
+                neighbor.state.is_revealed = True
+                self.revealed_count += 1
+                if neighbor.state.adjacent == 0:
+                    stack.append((nc, nr))
+
+    self._check_win()
 
     def toggle_flag(self, col: int, row: int) -> None:
-        # TODO: Toggle a flag on a non-revealed cell.
-        # if not self.is_inbounds(col, row):
-        #     return
-        
-        pass
+      if not self.is_inbounds(col, row):
+        return
+      cell = self.cells[self.index(col, row)]
+      if cell.state.is_revealed:
+        return
+      cell.state.is_flagged = not cell.state.is_flagged
 
     def flagged_count(self) -> int:
-        # TODO: Return current number of flagged cells.
-        pass
+      return sum(1 for c in self.cells if c.state.is_flagged)
 
     def _reveal_all_mines(self) -> None:
         """Reveal all mines; called on game over."""
