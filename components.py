@@ -107,16 +107,47 @@ def place_mines(self, safe_col: int, safe_row: int) -> None:
 
     self._mines_placed = True
 
-    def reveal(self, col: int, row: int) -> None:
-        # TODO: Reveal a cell; if zero-adjacent, iteratively flood to neighbors.
-        # if not self.is_inbounds(col, row):
-        #     return
-        # if not self._mines_placed:
-        #     self.place_mines(col, row)
+def reveal(self, col: int, row: int) -> None:
+    if not self.is_inbounds(col, row):
+        return
 
-        
-        # self._check_win()
-        pass
+    if not self._mines_placed:
+        self.place_mines(col, row)
+
+    cell = self.cells[self.index(col, row)]
+    if cell.state.is_revealed or cell.state.is_flagged:
+        return
+
+    cell.state.is_revealed = True
+    self.revealed_count += 1
+
+    # 지뢰 클릭 → 게임오버
+    if cell.state.is_mine:
+        self.game_over = True
+        self._reveal_all_mines()
+        return
+
+    # 0인 칸이면 flood-fill
+    if cell.state.adjacent == 0:
+        stack = [(col, row)]
+        visited = set()
+        while stack:
+            c, r = stack.pop()
+            for nc, nr in self.neighbors(c, r):
+                idx = self.index(nc, nr)
+                neighbor = self.cells[idx]
+                if (nc, nr) in visited:
+                    continue
+                if neighbor.state.is_revealed or neighbor.state.is_flagged:
+                    continue
+                visited.add((nc, nr))
+
+                neighbor.state.is_revealed = True
+                self.revealed_count += 1
+                if neighbor.state.adjacent == 0:
+                    stack.append((nc, nr))
+
+    self._check_win()
 
     def toggle_flag(self, col: int, row: int) -> None:
         # TODO: Toggle a flag on a non-revealed cell.
