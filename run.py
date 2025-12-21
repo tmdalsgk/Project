@@ -10,7 +10,7 @@ The logic lives in components.Board; this module should not implement rules.
 """
 
 import sys
-
+import random  #추가 
 import pygame
 
 import config
@@ -183,6 +183,31 @@ class Game:
         self.screen = pygame.display.set_mode(config.display_dimension)
         self.reset()
 
+    def give_hint(self):
+        """지뢰가 없고 아직 열리지 않은 칸 중 하나를 임의로 확인"""
+        if self.board.game_over or self.board.win:
+            return
+
+        # 아직 열리지 않았고 지뢰가 아닌 칸들의 좌표 리스트 생성
+        unrevealed_safe_cells = [
+            (c, r) for r in range(self.board.rows)
+            for c in range(self.board.cols)
+            if not self.board.cells[self.board.index(c, r)].state.is_revealed 
+            and not self.board.cells[self.board.index(c, r)].state.is_mine
+        ]
+
+        if unrevealed_safe_cells:
+            # 리스트에서 무작위로 하나 선택
+            c, r = random.choice(unrevealed_safe_cells)
+            
+            # 게임이 아직 시작 전이라면 시작 처리
+            if not self.started:
+                self.started = True
+                self.start_ticks_ms = pygame.time.get_ticks()
+            
+            # 해당 칸 오픈
+            self.board.reveal(c, r)
+
     def reset(self):
         """Reset the game state and start a new board."""
         self.board = Board(config.cols, config.rows, config.num_mines)
@@ -247,6 +272,9 @@ class Game:
                     self.change_difficulty('medium')
                 elif event.key == pygame.K_3:
                     self.change_difficulty('hard')
+                # 힌트 키(H) 추가
+                elif event.key == pygame.K_h:
+                    self.give_hint()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
         if (self.board.game_over or self.board.win) and self.started and not self.end_ticks_ms:
