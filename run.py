@@ -261,11 +261,9 @@ class Game:
         return pygame.time.get_ticks() - self.start_ticks_ms
 
     def _format_time(self, ms: int) -> str:
-        """Format milliseconds as mm:ss string."""
-        total_seconds = ms // 1000
-        minutes = total_seconds // 60
-        seconds = total_seconds % 60
-        return f"{minutes:02d}:{seconds:02d}"
+        """밀리초를 소수점 둘째 자리까지의 초(s) 단위 문자열로 변환"""
+        seconds = ms / 1000.0
+        return f"{seconds:.2f}s"
 
     def _result_text(self) -> str | None:
         """결과 레이블에 하이 스코어 정보를 포함하여 반환"""
