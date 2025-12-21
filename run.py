@@ -166,6 +166,23 @@ class Game:
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
 
+    def change_difficulty(self, level: str):
+        """난이도에 따라 설정을 변경하고 게임을 리셋"""
+        if level == 'easy':
+            config.cols, config.rows, config.num_mines = 10, 10, 10
+        elif level == 'medium':
+            config.cols, config.rows, config.num_mines = 16, 16, 40
+        elif level == 'hard':
+            config.cols, config.rows, config.num_mines = 30, 20, 99
+
+        # 화면 크기 재계산 및 재설정
+        config.width = config.margin_left + config.cols * config.cell_size + config.margin_right
+        config.height = config.margin_top + config.rows * config.cell_size + config.margin_bottom
+        config.display_dimension = (config.width, config.height)
+        
+        self.screen = pygame.display.set_mode(config.display_dimension)
+        self.reset()
+
     def reset(self):
         """Reset the game state and start a new board."""
         self.board = Board(config.cols, config.rows, config.num_mines)
@@ -223,6 +240,13 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
+                # 난이도 조절 키 추가
+                elif event.key == pygame.K_1:
+                    self.change_difficulty('easy')
+                elif event.key == pygame.K_2:
+                    self.change_difficulty('medium')
+                elif event.key == pygame.K_3:
+                    self.change_difficulty('hard')
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
         if (self.board.game_over or self.board.win) and self.started and not self.end_ticks_ms:
