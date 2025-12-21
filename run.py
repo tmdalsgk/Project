@@ -11,6 +11,7 @@ The logic lives in components.Board; this module should not implement rules.
 
 import sys
 import random  #추가 
+import os  #추가
 import pygame
 
 import config
@@ -92,9 +93,24 @@ class Renderer:
         overlay = pygame.Surface((config.width, config.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, config.result_overlay_alpha))
         self.screen.blit(overlay, (0, 0))
-        label = self.result_font.render(text, True, config.color_result)
-        rect = label.get_rect(center=(config.width // 2, config.height // 2))
-        self.screen.blit(label, rect)
+
+        # 줄바꿈 기준으로 텍스트 나누기
+        lines = text.split('\n')
+        line_surfaces = []
+        total_height = 0
+
+        for line in lines:
+            surf = self.result_font.render(line, True, config.color_result)
+            line_surfaces.append(surf)
+            # 전체 문구의 높이를 계산
+            total_height += surf.get_height() + 10
+
+        # 여러 줄을 중앙에 순서대로 배치
+        start_y = (config.height - total_height) // 2
+        for surf in line_surfaces:
+            rect = surf.get_rect(center=(config.width // 2, start_y + surf.get_height() // 2))
+            self.screen.blit(surf, rect)
+            start_y += surf.get_height() + 10
 
 
 class InputController:
@@ -165,6 +181,24 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        # 게임 시작 시 기존 최고 기록 로드
+        self.high_score = self.load_high_score()
+
+    def load_high_score(self) -> float:
+        """파일에서 최고 기록(초)을 불러옴"""
+        if os.path.exists("highscore.txt"):
+            with open("highscore.txt", "r") as f:
+                try:
+                    return float(f.read())
+                except:
+                    return float('inf')
+        return float('inf')
+
+    def save_high_score(self, score: float):
+        """새로운 최고 기록을 파일에 저장"""
+        with open("highscore.txt", "w") as f:
+            f.write(f"{score:.2f}")
+        self.high_score = score
 
     def change_difficulty(self, level: str):
         """난이도에 따라 설정을 변경하고 게임을 리셋"""
@@ -234,11 +268,18 @@ class Game:
         return f"{minutes:02d}:{seconds:02d}"
 
     def _result_text(self) -> str | None:
-        """Return result label to display, or None if game continues."""
+        """결과 레이블에 하이 스코어 정보를 포함하여 반환"""
         if self.board.game_over:
             return "GAME OVER"
         if self.board.win:
-            return "GAME CLEAR"
+            current_time = self._elapsed_ms() / 1000.0  # 초 단위로 변환
+            
+            # 신기록 달성 여부 확인
+            if current_time < self.high_score:
+                self.save_high_score(current_time)
+                return f"NEW RECORD!\n{current_time:.2f}s"
+            else:
+                return f"GAME CLEAR!\nBEST: {self.high_score:.2f}s"
         return None
 
     def draw(self):
