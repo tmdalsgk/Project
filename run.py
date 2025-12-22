@@ -10,7 +10,7 @@ The logic lives in components.Board; this module should not implement rules.
 """
 
 import sys
-import random  #추가 
+import random  # [추가] 힌트 무작위 선택을 위해 필요
 import pygame
 
 import config
@@ -71,8 +71,8 @@ class Renderer:
                 )
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
-    def draw_header(self, remaining_mines: int, time_text: str) -> None:
-        """Draw the header bar containing remaining mines and elapsed time."""
+    def draw_header(self, remaining_mines: int, time_text: str, difficulty: str, hint_used: int) -> None:  # [수정] hint_used 추가
+        """Draw the header bar containing remaining mines, difficulty info, hint status, and elapsed time."""
         pygame.draw.rect(
             self.screen,
             config.color_header,
@@ -80,10 +80,16 @@ class Renderer:
         )
         left_text = f"Mines: {remaining_mines}"
         right_text = f"Time: {time_text}"
+        center_text = f"[{difficulty}] Hint: {hint_used}/1"  # [수정] 난이도 옆에 힌트 사용 현황 추가
+        
         left_label = self.header_font.render(left_text, True, config.color_header_text)
         right_label = self.header_font.render(right_text, True, config.color_header_text)
+        center_label = self.header_font.render(center_text, True, config.color_header_text)
+        
         self.screen.blit(left_label, (10, 12))
         self.screen.blit(right_label, (config.width - right_label.get_width() - 10, 12))
+        # 중앙 정렬하여 렌더링
+        self.screen.blit(center_label, (config.width // 2 - center_label.get_width() // 2, 12))
 
     def draw_result_overlay(self, text: str | None) -> None:
         """Draw a semi-transparent overlay with centered result text, if any."""
@@ -149,6 +155,7 @@ class InputController:
             }
             game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
 
+
 class Game:
     """Main application object orchestrating loop and high-level state."""
 
@@ -165,9 +172,12 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        self.difficulty_name = "MEDIUM"
+        self.hint_used = 0  # [추가] 힌트 사용 횟수 초기화
 
     def change_difficulty(self, level: str):
-        """난이도에 따라 설정을 변경하고 게임을 리셋"""
+        """난이도에 따라 설정을 변경하고 게임을 리셋 (이슈 2)"""
+        self.difficulty_name = level.upper()
         if level == 'easy':
             config.cols, config.rows, config.num_mines = 10, 10, 10
         elif level == 'medium':
@@ -184,29 +194,24 @@ class Game:
         self.reset()
 
     def give_hint(self):
-        """지뢰가 없고 아직 열리지 않은 칸 중 하나를 임의로 확인"""
-        if self.board.game_over or self.board.win:
+        """지뢰가 없는 칸 하나를 임의로 열어줌 (이슈 3)"""
+        # 이미 힌트를 썼거나 게임이 끝난 경우 실행 안 함
+        if self.hint_used >= 1 or self.board.game_over or self.board.win:
             return
 
-        # 아직 열리지 않았고 지뢰가 아닌 칸들의 좌표 리스트 생성
-        unrevealed_safe_cells = [
-            (c, r) for r in range(self.board.rows)
-            for c in range(self.board.cols)
-            if not self.board.cells[self.board.index(c, r)].state.is_revealed 
-            and not self.board.cells[self.board.index(c, r)].state.is_mine
-        ]
-
-        if unrevealed_safe_cells:
-            # 리스트에서 무작위로 하나 선택
-            c, r = random.choice(unrevealed_safe_cells)
+        # 지뢰가 아니고 아직 열리지 않은 칸들의 리스트 추출
+        unrevealed_safe = [c for c in self.board.cells if not c.state.is_mine and not c.state.is_revealed]
+        
+        if unrevealed_safe:
+            target = random.choice(unrevealed_safe)
             
-            # 게임이 아직 시작 전이라면 시작 처리
+            # 힌트 사용 시 게임이 시작되지 않았다면 타이머 시작
             if not self.started:
                 self.started = True
                 self.start_ticks_ms = pygame.time.get_ticks()
-            
-            # 해당 칸 오픈
-            self.board.reveal(c, r)
+                
+            self.board.reveal(target.col, target.row)
+            self.hint_used = 1  # 사용 횟수 업데이트
 
     def reset(self):
         """Reset the game state and start a new board."""
@@ -217,6 +222,7 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        self.hint_used = 0  # [추가] 리셋 시 힌트 사용량 초기화
 
     def _elapsed_ms(self) -> int:
         """Return elapsed time in milliseconds (stops when game ends)."""
@@ -248,7 +254,8 @@ class Game:
         self.screen.fill(config.color_bg)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        self.renderer.draw_header(remaining, time_text)
+        # [수정] 힌트 현황까지 헤더에 전달
+        self.renderer.draw_header(remaining, time_text, self.difficulty_name, self.hint_used)
         now = pygame.time.get_ticks()
         for r in range(self.board.rows):
             for c in range(self.board.cols):
@@ -265,16 +272,16 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
-                # 난이도 조절 키 추가
+                # [추가] 힌트 단축키 H
+                elif event.key == pygame.K_h:
+                    self.give_hint()
+                # 난이도 조절 키
                 elif event.key == pygame.K_1:
                     self.change_difficulty('easy')
                 elif event.key == pygame.K_2:
                     self.change_difficulty('medium')
                 elif event.key == pygame.K_3:
                     self.change_difficulty('hard')
-                # 힌트 키(H) 추가
-                elif event.key == pygame.K_h:
-                    self.give_hint()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
         if (self.board.game_over or self.board.win) and self.started and not self.end_ticks_ms:
