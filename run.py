@@ -71,7 +71,7 @@ class Renderer:
                 )
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
-    def draw_header(self, remaining_mines: int, time_text: str) -> None:
+    def draw_header(self, remaining_mines: int, time_text: str, difficulty: str) -> None:  # [수정] difficulty 인자 추가
         """Draw the header bar containing remaining mines and elapsed time."""
         pygame.draw.rect(
             self.screen,
@@ -80,10 +80,14 @@ class Renderer:
         )
         left_text = f"Mines: {remaining_mines}"
         right_text = f"Time: {time_text}"
+        center_text = f"[{difficulty}]"  # [추가] 난이도 텍스트
         left_label = self.header_font.render(left_text, True, config.color_header_text)
         right_label = self.header_font.render(right_text, True, config.color_header_text)
+        center_label = self.header_font.render(center_text, True, config.color_header_text) # [추가]
         self.screen.blit(left_label, (10, 12))
         self.screen.blit(right_label, (config.width - right_label.get_width() - 10, 12))
+        # [추가] 중앙 정렬하여 렌더링
+        self.screen.blit(center_label, (config.width // 2 - center_label.get_width() // 2, 12))
 
     def draw_result_overlay(self, text: str | None) -> None:
         """Draw a semi-transparent overlay with centered result text, if any."""
@@ -165,9 +169,12 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        # [추가] 초기 난이도
+        self.difficulty_name = "MEDIUM"
 
     def change_difficulty(self, level: str):
         """난이도에 따라 설정을 변경하고 게임을 리셋"""
+        self.difficulty_name = level.upper()  # [추가] 난이도 이름 저장
         if level == 'easy':
             config.cols, config.rows, config.num_mines = 10, 10, 10
         elif level == 'medium':
@@ -223,7 +230,7 @@ class Game:
         self.screen.fill(config.color_bg)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        self.renderer.draw_header(remaining, time_text)
+        self.renderer.draw_header(remaining, time_text, self.difficulty_name)  # [수정] difficulty_name 전달
         now = pygame.time.get_ticks()
         for r in range(self.board.rows):
             for c in range(self.board.cols):
