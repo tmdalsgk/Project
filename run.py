@@ -115,39 +115,39 @@ class InputController:
             return int(col), int(row)
         return -1, -1
 
-def handle_mouse(self, pos, button) -> None:
-    col, row = self.pos_to_grid(pos[0], pos[1])
-    if col == -1:
-        return
+    def handle_mouse(self, pos, button) -> None:
+        col, row = self.pos_to_grid(pos[0], pos[1])
+        if col == -1:
+            return
 
-    game = self.game
+        game = self.game
 
-    # LEFT CLICK = reveal
-    if button == config.mouse_left:
-        game.highlight_targets.clear()
+        # LEFT CLICK = reveal
+        if button == config.mouse_left:
+            game.highlight_targets.clear()
 
-        if not game.started:
-            game.started = True
-            game.start_ticks_ms = pygame.time.get_ticks()
+            if not game.started:
+                game.started = True
+                game.start_ticks_ms = pygame.time.get_ticks()
 
-        if not game.board.game_over and not game.board.win:
-            game.board.reveal(col, row)
+            if not game.board.game_over and not game.board.win:
+                game.board.reveal(col, row)
 
-    # RIGHT CLICK = toggle flag
-    elif button == config.mouse_right:
-        game.highlight_targets.clear()
-        if not game.board.game_over and not game.board.win:
-            game.board.toggle_flag(col, row)
+        # RIGHT CLICK = toggle flag
+        elif button == config.mouse_right:
+            game.highlight_targets.clear()
+            if not game.board.game_over and not game.board.win:
+                game.board.toggle_flag(col, row)
 
-    # MIDDLE CLICK = highlight neighbors
-    elif button == config.mouse_middle:
-        neighbors = game.board.neighbors(col, row)
-        game.highlight_targets = {
-            (nc, nr)
-            for (nc, nr) in neighbors
-            if not game.board.cells[game.board.index(nc, nr)].state.is_revealed
-        }
-        game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
+        # MIDDLE CLICK = highlight neighbors
+        elif button == config.mouse_middle:
+            neighbors = game.board.neighbors(col, row)
+            game.highlight_targets = {
+                (nc, nr)
+                for (nc, nr) in neighbors
+                if not game.board.cells[game.board.index(nc, nr)].state.is_revealed
+            }
+            game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
 
 class Game:
     """Main application object orchestrating loop and high-level state."""

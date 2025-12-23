@@ -50,15 +50,16 @@ color_highlight = (70, 130, 180)
 color_result = (242, 242, 0)
 
 # Number colors 1~8
+# 기존보다 구분이 명확하게 수정
 number_colors = {
-    1: (25, 118, 210),   # blue
-    2: (56, 142, 60),    # green
-    3: (211, 47, 47),    # red
-    4: (123, 31, 162),   # purple
-    5: (255, 143, 0),    # orange
-    6: (0, 151, 167),    # cyan
-    7: (85, 85, 85),     # gray
-    8: (0, 0, 0),        # black
+    1: (79, 195, 247),   # Light Blue
+    2: (129, 199, 132),  # Soft Green
+    3: (255, 138, 101),  # Coral
+    4: (149, 117, 205),  # Lavender
+    5: (255, 213, 79),   # Soft Yellow
+    6: (77, 208, 225),   # Light Teal
+    7: (236, 64, 122),   # Pink
+    8: (158, 158, 158),  # Muted Grey
 }
 
 # Text / UI
